@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classificador de Notícias com BERT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📰 Classificador de Notícias</h1>
+            <p class="subtitle">Powered by DistilBERT Fine-tuned on AG News</p>
+            <div class="badge-container">
+                <span class="badge">🤖 Transformers</span>
+                <span class="badge">🎯 94.2% Accuracy</span>
+                <span class="badge">⚡ Real-time</span>
+            </div>
+        </header>
+
+        <!-- Categories Info -->
+        <div class="categories-info">
+            <h3>📋 Categorias Disponíveis:</h3>
+            <div class="categories-grid">
+                <div class="category-card">
+                    <span class="emoji">🌍</span>
+                    <strong>World</strong>
+                    <small>Política, internacional, diplomacia</small>
+                </div>
+                <div class="category-card">
+                    <span class="emoji">⚽</span>
+                    <strong>Sports</strong>
+                    <small>Esportes, competições, atletas</small>
+                </div>
+                <div class="category-card">
+                    <span class="emoji">💼</span>
+                    <strong>Business</strong>
+                    <small>Negócios, economia, mercados</small>
+                </div>
+                <div class="category-card">
+                    <span class="emoji">🔬</span>
+                    <strong>Sci/Tech</strong>
+                    <small>Ciência, tecnologia, inovação</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Error Message -->
+        {% if error %}
+        <div class="alert alert-error">
+            <strong>{{ error }}</strong>
+        </div>
+        {% endif %}
+
+        <!-- Main Form -->
+        <div class="main-card">
+            <form method="POST" action="/classify">
+                <div class="form-group">
+                    <label for="news_text">
+                        <strong>✍️ Cole ou digite a notícia:</strong>
+                        <span class="char-count" id="charCount">0 / 5000 caracteres</span>
+                    </label>
+                    <textarea 
+                        id="news_text" 
+                        name="news_text" 
+                        rows="10" 
+                        maxlength="5000"
+                        placeholder="Exemplo: Apple announces breakthrough in artificial intelligence with new neural processing chip. The company plans to integrate the technology across all devices starting next quarter..."
+                        required
+                    >{{ texto if texto }}</textarea>
+                    <div class="textarea-hint">
+                        💡 Mínimo 20 caracteres | Máximo 5000 caracteres
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    <span class="btn-text">🚀 Classificar Notícia</span>
+                    <span class="btn-loader" style="display: none;">⏳ Processando...</span>
+                </button>
+            </form>
+        </div>
+
+        <!-- Examples Section -->
+        <div class="examples-section">
+            <h3>💡 Exemplos para Testar:</h3>
+            <div class="examples-grid">
+                <button class="example-btn" onclick="fillExample(0)">
+                    🌍 World
+                </button>
+                <button class="example-btn" onclick="fillExample(1)">
+                    ⚽ Sports
+                </button>
+                <button class="example-btn" onclick="fillExample(2)">
+                    💼 Business
+                </button>
+                <button class="example-btn" onclick="fillExample(3)">
+                    🔬 Sci/Tech
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                Desenvolvido como parte do curso <strong>Especialista em IA</strong> - Módulo EAI_05<br>
+                <small>Autor: Carlos Henrique Bamberg Marques | 
+                <a href="https://github.com/RickBamberg" target="_blank">GitHub</a> |
+                <a href="/health" target="_blank">API Status</a></small>
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Exemplos de notícias
+        const examples = [
+            "UN Security Council holds emergency meeting to discuss escalating tensions in the Middle East. International leaders call for immediate diplomatic resolution and humanitarian aid.",
+            "Lakers defeat Celtics 108-102 in overtime thriller at TD Garden. LeBron James leads with 35 points and 12 assists in crucial playoff game.",
+            "Stock market reaches all-time high as tech sector soars. Apple and Microsoft lead gains with record quarterly earnings beating analyst expectations.",
+            "Scientists discover new exoplanet in habitable zone. Advanced telescopes reveal Earth-sized world orbiting nearby star with potential for liquid water."
+        ];
+
+        // Preencher exemplo
+        function fillExample(index) {
+            const textarea = document.getElementById('news_text');
+            textarea.value = examples[index];
+            updateCharCount();
+            textarea.focus();
+        }
+
+        // Contador de caracteres
+        const textarea = document.getElementById('news_text');
+        const charCount = document.getElementById('charCount');
+
+        function updateCharCount() {
+            const length = textarea.value.length;
+            charCount.textContent = `${length} / 5000 caracteres`;
+            
+            if (length < 20) {
+                charCount.style.color = '#ef4444';
+            } else if (length > 4500) {
+                charCount.style.color = '#f59e0b';
+            } else {
+                charCount.style.color = '#10b981';
+            }
+        }
+
+        textarea.addEventListener('input', updateCharCount);
+        updateCharCount();
+
+        // Loading state no botão
+        const form = document.querySelector('form');
+        const submitBtn = document.getElementById('submitBtn');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoader = submitBtn.querySelector('.btn-loader');
+
+        form.addEventListener('submit', function() {
+            btnText.style.display = 'none';
+            btnLoader.style.display = 'inline';
+            submitBtn.disabled = true;
+        });
+
+        // Atalho de teclado (Ctrl+Enter para submeter)
+        textarea.addEventListener('keydown', function(e) {
+            if (e.ctrlKey && e.key === 'Enter') {
+                form.submit();
+            }
+        });
+    </script>
+</body>
+</html>

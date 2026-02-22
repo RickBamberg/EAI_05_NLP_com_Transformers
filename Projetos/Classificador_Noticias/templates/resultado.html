@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resultado - Classificador de Notícias</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📰 Resultado da Classificação</h1>
+            <p class="subtitle">Análise completa da notícia</p>
+        </header>
+
+        <!-- Result Card -->
+        <div class="result-card">
+            <!-- Main Result -->
+            <div class="main-result">
+                <div class="result-emoji">{{ resultado.top_predicoes[0].emoji }}</div>
+                <div class="result-info">
+                    <h2 class="result-category">{{ resultado.classe_principal }}</h2>
+                    <p class="result-description">{{ resultado.top_predicoes[0].descricao }}</p>
+                    <div class="confidence-bar-container">
+                        <div class="confidence-bar" style="width: {{ resultado.confianca_principal * 100 }}%"></div>
+                    </div>
+                    <p class="confidence-text">
+                        <strong>Confiança:</strong> {{ "%.2f"|format(resultado.confianca_principal * 100) }}%
+                    </p>
+                </div>
+            </div>
+
+            <!-- All Predictions -->
+            <div class="all-predictions">
+                <h3>📊 Distribuição de Probabilidades:</h3>
+                {% for pred in resultado.top_predicoes %}
+                <div class="prediction-item">
+                    <div class="prediction-header">
+                        <span class="pred-emoji">{{ pred.emoji }}</span>
+                        <span class="pred-name">{{ pred.classe }}</span>
+                        <span class="pred-percentage">{{ pred.confianca_pct }}</span>
+                    </div>
+                    <div class="pred-bar-container">
+                        <div class="pred-bar" style="width: {{ pred.confianca * 100 }}%; background: 
+                            {% if loop.index == 1 %}#10b981
+                            {% elif loop.index == 2 %}#3b82f6
+                            {% elif loop.index == 3 %}#f59e0b
+                            {% else %}#6b7280
+                            {% endif %}">
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- News Text -->
+        <div class="news-text-card">
+            <h3>📰 Texto Analisado:</h3>
+            <div class="news-text">
+                {{ news_text }}
+            </div>
+            <div class="news-stats">
+                <span>📝 {{ news_text|length }} caracteres</span>
+                <span>📊 {{ news_text.split()|length }} palavras</span>
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="technical-details">
+            <h3>🔍 Detalhes Técnicos:</h3>
+            <div class="tech-grid">
+                <div class="tech-item">
+                    <strong>Modelo:</strong>
+                    <span>DistilBERT</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Fine-tuning:</strong>
+                    <span>AG News Dataset</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Accuracy:</strong>
+                    <span>94.2%</span>
+                </div>
+                <div class="tech-item">
+                    <strong>Classes:</strong>
+                    <span>4 categorias</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+            <a href="/" class="btn-secondary">
+                🔄 Classificar Outra Notícia
+            </a>
+            <button onclick="shareResult()" class="btn-secondary">
+                📤 Compartilhar Resultado
+            </button>
+            <button onclick="copyText()" class="btn-secondary">
+                📋 Copiar Texto
+            </button>
+        </div>
+
+        <!-- Comparison with Classic NLP -->
+        <div class="comparison-card">
+            <h3>📈 Comparação: NLP Clássico vs Transformers</h3>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>TF-IDF + SVM (EAI_04)</th>
+                        <th>BERT Fine-tuned (EAI_05)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Accuracy</strong></td>
+                        <td>~87%</td>
+                        <td>~94% ✅</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Contexto</strong></td>
+                        <td>Bag of Words (sem ordem)</td>
+                        <td>Self-Attention (captura ordem) ✅</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Tamanho Modelo</strong></td>
+                        <td>&lt;10 MB ✅</td>
+                        <td>~260 MB</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Velocidade</strong></td>
+                        <td>&lt;10ms ✅</td>
+                        <td>~50ms</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Quando usar</strong></td>
+                        <td>Baseline rápido</td>
+                        <td>Máxima accuracy ✅</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>
+                Desenvolvido como parte do curso <strong>Especialista em IA</strong> - Módulo EAI_05<br>
+                <small>Autor: Carlos Henrique Bamberg Marques | 
+                <a href="https://github.com/RickBamberg" target="_blank">GitHub</a></small>
+            </p>
+        </footer>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Compartilhar resultado
+        function shareResult() {
+            const categoria = "{{ resultado.classe_principal }}";
+            const confianca = "{{ '%.2f'|format(resultado.confianca_principal * 100) }}";
+            const texto = `Classifiquei uma notícia como "${categoria}" com ${confianca}% de confiança usando BERT! 🤖📰`;
+            
+            if (navigator.share) {
+                navigator.share({
+                    title: 'Classificador de Notícias - BERT',
+                    text: texto,
+                    url: window.location.href
+                }).catch(err => console.log('Erro ao compartilhar:', err));
+            } else {
+                // Fallback: copiar para clipboard
+                navigator.clipboard.writeText(texto).then(() => {
+                    alert('✅ Texto copiado para a área de transferência!');
+                });
+            }
+        }
+
+        // Copiar texto da notícia
+        function copyText() {
+            const newsText = `{{ news_text }}`;
+            navigator.clipboard.writeText(newsText).then(() => {
+                alert('✅ Texto da notícia copiado!');
+            }).catch(err => {
+                console.error('Erro ao copiar:', err);
+            });
+        }
+
+        // Animação de entrada
+        window.addEventListener('load', () => {
+            const resultCard = document.querySelector('.result-card');
+            resultCard.style.opacity = '0';
+            resultCard.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                resultCard.style.transition = 'all 0.5s ease';
+                resultCard.style.opacity = '1';
+                resultCard.style.transform = 'translateY(0)';
+            }, 100);
+        });
+
+        // Confete para alta confiança
+        const confianca = {{ resultado.confianca_principal }};
+        if (confianca >= 0.95) {
+            console.log('🎉 Alta confiança! Resultado excelente!');
+            // Adicionar efeito visual (opcional)
+            document.querySelector('.main-result').style.animation = 'pulse 0.5s ease';
+        }
+    </script>
+</body>
+</html>
